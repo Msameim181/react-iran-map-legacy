@@ -10,9 +10,10 @@
     "url": "git+https://github.com/simamojtahedi/react-iran-map.git"
   },
   "scripts": {
-    "build": "npm run build:esm && npm run build:cjs",
+    "build": "npm run build:esm && npm run build:cjs && npm run build:styles",
     "build:esm": "tsc",
     "build:cjs": "tsc --module commonjs --outDir dist/cjs",
+    "build:styles": "node scripts/copy-styles.js",
     "demo": "vite --config example/vite.config.ts",
     "demo:build": "vite build --config example/vite.config.ts",
     "lint": "eslint \"{src,tests,example,scripts}/**/*.{js,ts,jsx,tsx}\"",
