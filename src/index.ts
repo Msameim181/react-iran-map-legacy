@@ -14,6 +14,7 @@ export type {
   IranMapCapitalType,
   IranMapColorBand,
   IranMapMode,
+  IranMapValue,
   IranMapIsland,
   IranMapRegion,
   IranMapWaterBody,

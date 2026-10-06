@@ -3,7 +3,7 @@ import { Tooltip } from 'react-tooltip'
 import { IranMapCapital, MapProps, RenderableMapArea, RenderableMapIsland } from '../../interfaces'
 
 const getTooltip = (area: RenderableMapArea, title: string) => {
-  const value = area.value === undefined ? '—' : String(area.value)
+  const value = area.value === undefined ? 'No data' : String(area.value)
   return `${area.faName || area.name} — ${title ? `${title} ` : ''}${value}`
 }
 
@@ -103,7 +103,11 @@ const IranMapWrapper: React.FC<MapProps> = ({
           <path
             key={`${area.type}:${area.id}:${index}`}
             d={area.path}
-            fill={area.id === selectedAreaId && selectedAreaColor ? selectedAreaColor : area.fill}
+            fill={
+              area.id === selectedAreaId && selectedAreaColor && area.value !== undefined
+                ? selectedAreaColor
+                : area.fill
+            }
             fillRule='evenodd'
             stroke={strokeColor}
             strokeWidth={strokeWidth}
@@ -168,7 +172,9 @@ const IranMapWrapper: React.FC<MapProps> = ({
                 <path
                   className='iran-map-island-shape'
                   d={island.path}
-                  fill={selected && selectedAreaColor ? selectedAreaColor : island.fill}
+                  fill={
+                    selected && selectedAreaColor && island.area.value !== undefined ? selectedAreaColor : island.fill
+                  }
                   fillRule='evenodd'
                   stroke={strokeColor}
                   strokeWidth={strokeWidth}

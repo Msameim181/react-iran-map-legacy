@@ -8,6 +8,9 @@ export type IranMapCapitalType = 'province' | 'county'
 
 export type RegionAggregation = 'sum' | 'average' | 'min' | 'max'
 
+/** null, undefined, and -1 represent no data. Zero is a valid value. */
+export type IranMapValue = number | null | undefined
+
 export interface selectedProvinceType {
   name: string | undefined
   faName: string | undefined
@@ -19,7 +22,7 @@ export interface provinceType {
 }
 
 export interface mapDataType {
-  [key: string]: number
+  [key: string]: IranMapValue
 }
 
 export interface MapBoundary {

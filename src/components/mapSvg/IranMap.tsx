@@ -13,18 +13,20 @@ import {
   RegionAggregation,
   RenderableMapArea,
   RenderableMapIsland,
+  mapDataType,
 } from '../../interfaces'
+import { normalizeMapValue } from '../../utils/mapValues'
 import IranMapWrapper from './IranMapWrapper'
 import './iran-map.css'
 
-const getValue = (data: Record<string, number>, keys: Array<string | undefined>) => {
+const getValue = (data: mapDataType, keys: Array<string | undefined>) => {
   for (const key of keys) {
-    if (key !== undefined && Object.prototype.hasOwnProperty.call(data, key)) return data[key]
+    if (key !== undefined && Object.prototype.hasOwnProperty.call(data, key)) return normalizeMapValue(data[key])
   }
   return undefined
 }
 
-const getBoundaryValue = (boundary: MapBoundary, data: Record<string, number>) =>
+const getBoundaryValue = (boundary: MapBoundary, data: mapDataType) =>
   getValue(data, [
     boundary.id,
     boundary.id.includes('.') ? boundary.id.split('.').pop() : undefined,
@@ -41,9 +43,12 @@ const aggregate = (values: number[], operation: RegionAggregation) => {
   return values.reduce((total, value) => total + value, 0)
 }
 
-const getRegionValue = (region: IranMapRegion, data: Record<string, number>, operation: RegionAggregation) => {
-  const directValue = getValue(data, [region.id, region.faName, region.name])
-  if (directValue !== undefined) return directValue
+const getRegionValue = (region: IranMapRegion, data: mapDataType, operation: RegionAggregation) => {
+  const keys = [region.id, region.faName, region.name]
+  // An explicitly missing region value must not fall back to province aggregation.
+  if (keys.some((key) => key !== undefined && Object.prototype.hasOwnProperty.call(data, key))) {
+    return getValue(data, keys)
+  }
   const values = region.provinces
     .map((provinceKey) => {
       const province = provinceBoundaries.find(
@@ -56,7 +61,7 @@ const getRegionValue = (region: IranMapRegion, data: Record<string, number>, ope
       return province ? getBoundaryValue(province, data) : undefined
     })
     .filter((value): value is number => value !== undefined)
-  return aggregate(values, operation)
+  return normalizeMapValue(aggregate(values, operation))
 }
 
 const colorFromBand = (value: number, bands: IranMapColorBand[]) =>
@@ -230,7 +235,7 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
       if (area.value !== undefined) {
         if (colorBands && colorBands.length) {
           fill = colorFromBand(area.value, colorBands) || deactiveProvinceColor
-        } else if (area.value !== 0) {
+        } else {
           fill = colorFromGradient(area.value, min, max, colorRange)
         }
       }
