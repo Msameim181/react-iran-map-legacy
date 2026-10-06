@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react'
 import { countyBoundaries, provinceBoundaries } from '../../data/boundaries'
+import { countyCapitalMarkers, provinceCapitalMarkers } from '../../data/capitals'
 import {
   IranMapArea,
+  IranMapCapital,
   IranMapColorBand,
   IranMapRegion,
   IranMapWrapperProps,
@@ -94,6 +96,11 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
   className = '',
   ariaLabel = 'Interactive map of Iran',
   showLabels,
+  capitalMarkers = 'none',
+  capitalMarkerColor = '#123f4b',
+  capitalMarkerSize = 4,
+  showCapitalLabels = false,
+  onCapitalSelect,
 }) => {
   const [selectedAreaId, setSelectedAreaId] = useState(defaultSelectedArea || defaultSelectedProvince)
 
@@ -189,10 +196,19 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
     }
   }
 
+  const capitals = useMemo<IranMapCapital[]>(() => {
+    const activeLayer = capitalMarkers === 'auto' ? (mode === 'county' ? 'county' : 'province') : capitalMarkers
+    if (activeLayer === 'province') return provinceCapitalMarkers
+    if (activeLayer === 'county') return countyCapitalMarkers
+    if (activeLayer === 'both') return [...countyCapitalMarkers, ...provinceCapitalMarkers]
+    return []
+  }, [capitalMarkers, mode])
+
   return (
     <div className={`iran-map-wrapper ${className}`.trim()} style={{ width: width || 500 }}>
       <IranMapWrapper
         areas={areas}
+        capitals={capitals}
         width='100%'
         textColor={textColor}
         tooltipTitle={tooltipTitle}
@@ -204,6 +220,10 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
         onAreaHover={(area) => onHover && onHover(area)}
         ariaLabel={ariaLabel}
         showLabels={showLabels === undefined ? mode === 'province' : showLabels}
+        capitalMarkerColor={capitalMarkerColor}
+        capitalMarkerSize={capitalMarkerSize}
+        showCapitalLabels={showCapitalLabels}
+        onCapitalSelect={onCapitalSelect}
       />
     </div>
   )

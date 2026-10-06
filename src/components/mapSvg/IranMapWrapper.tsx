@@ -1,14 +1,22 @@
 import React from 'react'
 import { Tooltip } from 'react-tooltip'
-import { MapProps, RenderableMapArea } from '../../interfaces'
+import { IranMapCapital, MapProps, RenderableMapArea } from '../../interfaces'
 
 const getTooltip = (area: RenderableMapArea, title: string) => {
   const value = area.value === undefined ? '—' : String(area.value)
   return `${area.faName || area.name} — ${title ? `${title} ` : ''}${value}`
 }
 
+const getCapitalTooltip = (capital: IranMapCapital) => {
+  const type = capital.areaType === 'province' ? 'Province capital' : 'County center'
+  return `${type}: ${capital.faName} (${capital.name}) — ${capital.latitude.toFixed(5)}, ${capital.longitude.toFixed(
+    5,
+  )}`
+}
+
 const IranMapWrapper: React.FC<MapProps> = ({
   areas,
+  capitals,
   width,
   textColor,
   tooltipTitle,
@@ -20,6 +28,10 @@ const IranMapWrapper: React.FC<MapProps> = ({
   onAreaHover,
   ariaLabel,
   showLabels,
+  capitalMarkerColor,
+  capitalMarkerSize,
+  showCapitalLabels,
+  onCapitalSelect,
 }) => {
   const mapScale = 1
 
@@ -81,6 +93,59 @@ const IranMapWrapper: React.FC<MapProps> = ({
                 {area.faName}
               </text>
             ))}
+        {capitals.map((capital) => {
+          const baseSize = capital.areaType === 'province' ? capitalMarkerSize * 1.25 : capitalMarkerSize
+          const size = baseSize * mapScale
+          const tooltip = getCapitalTooltip(capital)
+          return (
+            <g
+              key={capital.id}
+              className={`iran-map-capital iran-map-capital--${capital.areaType}`}
+              transform={`translate(${capital.x} ${capital.y})`}
+              tabIndex={0}
+              role='button'
+              aria-label={tooltip}
+              data-testid={`iran-map-capital-${capital.areaType}-${capital.areaId}`}
+              data-area-id={capital.areaId}
+              data-capital-type={capital.areaType}
+              data-latitude={capital.latitude}
+              data-longitude={capital.longitude}
+              data-tooltip-id='iran-map-tooltip'
+              data-tooltip-content={tooltip}
+              onClick={() => onCapitalSelect && onCapitalSelect(capital)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onCapitalSelect && onCapitalSelect(capital)
+                }
+              }}
+            >
+              <circle className='iran-map-capital-hit' r={Math.max(9, size * 2)} />
+              <circle className='iran-map-capital-halo' r={size * 1.75} />
+              {capital.areaType === 'province' ? (
+                <path
+                  className='iran-map-capital-core'
+                  d={`M0 ${-size * 1.35} L${size * 1.35} 0 L0 ${size * 1.35} L${-size * 1.35} 0 Z`}
+                  fill={capitalMarkerColor}
+                />
+              ) : (
+                <circle className='iran-map-capital-core' r={size} fill={capitalMarkerColor} />
+              )}
+              <circle className='iran-map-capital-center' r={Math.max(1.1, size * 0.28)} />
+              {showCapitalLabels && (
+                <text
+                  className='iran-map-capital-label'
+                  x={size * 2.2}
+                  y={-size * 1.5}
+                  fill={textColor}
+                  fontSize={10 * mapScale}
+                >
+                  {capital.faName}
+                </text>
+              )}
+            </g>
+          )
+        })}
       </svg>
       <Tooltip id='iran-map-tooltip' variant='light' float className='iran-map-tooltip' />
     </>

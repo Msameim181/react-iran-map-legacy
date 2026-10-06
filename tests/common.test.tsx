@@ -123,6 +123,35 @@ describe('IranMap', () => {
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'khorasan-region', type: 'region' }))
   })
 
+  it('renders context-aware province and county capital markers', () => {
+    const provinceView = render(<IranMap data={provinceData} capitalMarkers='auto' />)
+    expect(provinceView.container.querySelectorAll('[data-capital-type="province"]')).toHaveLength(31)
+    expect(provinceView.getByTestId('iran-map-capital-province-razaviKhorasan').getAttribute('data-latitude')).toBe(
+      '36.29807',
+    )
+    provinceView.unmount()
+
+    const countyView = render(<IranMap mode='county' data={{}} capitalMarkers='auto' />)
+    expect(countyView.container.querySelectorAll('[data-capital-type="county"]')).toHaveLength(484)
+  })
+
+  it('reports the selected capital with its geographic coordinates', () => {
+    const onCapitalSelect = jest.fn()
+    const { getByTestId } = render(
+      <IranMap data={provinceData} capitalMarkers='province' onCapitalSelect={onCapitalSelect} />,
+    )
+
+    fireEvent.click(getByTestId('iran-map-capital-province-razaviKhorasan'))
+    expect(onCapitalSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        areaId: 'razaviKhorasan',
+        faName: 'مشهد',
+        latitude: 36.29807,
+        longitude: 59.60567,
+      }),
+    )
+  })
+
   it('does not render the former Bushehr maritime envelope as a detached dot', () => {
     const bushehr = provinceBoundaries.find((province) => province.id === 'bushehr')
 

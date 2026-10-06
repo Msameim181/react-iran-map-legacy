@@ -2,6 +2,10 @@ export type IranMapMode = 'province' | 'county' | 'region'
 
 export type IranMapAreaType = 'province' | 'county' | 'region'
 
+export type IranMapCapitalLayer = 'none' | 'auto' | 'province' | 'county' | 'both'
+
+export type IranMapCapitalType = 'province' | 'county'
+
 export type RegionAggregation = 'sum' | 'average' | 'min' | 'max'
 
 export interface selectedProvinceType {
@@ -56,6 +60,22 @@ export interface IranMapArea {
   code?: string
 }
 
+export interface IranMapCapital {
+  id: string
+  areaId: string
+  areaType: IranMapCapitalType
+  name: string
+  faName: string
+  provinceId: string
+  countyId?: number
+  latitude: number
+  longitude: number
+  x: number
+  y: number
+  sourceId: string
+  sourceFeatureId: string
+}
+
 export interface IranMapWrapperProps {
   data: mapDataType
   width?: number | string
@@ -81,6 +101,12 @@ export interface IranMapWrapperProps {
   className?: string
   ariaLabel?: string
   showLabels?: boolean
+  /** Capital markers to render. "auto" follows the active administrative mode. */
+  capitalMarkers?: IranMapCapitalLayer
+  capitalMarkerColor?: string
+  capitalMarkerSize?: number
+  showCapitalLabels?: boolean
+  onCapitalSelect?: (capital: IranMapCapital) => void
 }
 
 export interface RenderableMapArea extends IranMapArea {
@@ -92,6 +118,7 @@ export interface RenderableMapArea extends IranMapArea {
 
 export interface MapProps {
   areas: RenderableMapArea[]
+  capitals: IranMapCapital[]
   width?: number | string
   textColor: string
   tooltipTitle: string
@@ -103,4 +130,8 @@ export interface MapProps {
   onAreaHover: (area: RenderableMapArea | null) => void
   ariaLabel: string
   showLabels: boolean
+  capitalMarkerColor: string
+  capitalMarkerSize: number
+  showCapitalLabels: boolean
+  onCapitalSelect?: (capital: IranMapCapital) => void
 }
