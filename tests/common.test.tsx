@@ -180,10 +180,30 @@ describe('IranMap', () => {
     expect(bushehr?.path.match(/M[^Z]+Z/g)).toHaveLength(1)
   })
 
+  it('focuses the viewport on one province with only its selected counties', () => {
+    const { container, getByTestId, queryByTestId } = render(
+      <IranMap
+        data={{ ...provinceData, 'razaviKhorasan.mashhad': 90, 'razaviKhorasan.neyshabur': 65 }}
+        focusProvince='razaviKhorasan'
+        detailedCounties={['mashhad', 'neyshabur']}
+        capitalMarkers='auto'
+      />,
+    )
+
+    expect(container.querySelectorAll('[data-area-type="province"]')).toHaveLength(1)
+    expect(container.querySelectorAll('[data-area-type="county"]')).toHaveLength(2)
+    expect(getByTestId('iran-map-county-razaviKhorasan.mashhad')).toBeTruthy()
+    expect(queryByTestId('iran-map-county-tehran.tehran')).toBeNull()
+    expect(container.querySelector('svg')?.getAttribute('viewBox')).not.toBe('0 0 1000 825')
+    expect(container.querySelectorAll('[data-capital-type="province"]')).toHaveLength(1)
+  })
+
   it('keeps island land separate while linking it to its county color and selection', () => {
     const onSelect = jest.fn()
     const qeshmBoundary = countyBoundaries.find((county) => county.id === 'hormozgan.qeshm')
-    const { getByTestId } = render(<IranMap mode='county' data={{ 'hormozgan.qeshm': 72 }} onSelect={onSelect} />)
+    const { getByTestId } = render(
+      <IranMap mode='county' focusProvince='hormozgan' data={{ 'hormozgan.qeshm': 72 }} onSelect={onSelect} />,
+    )
 
     expect(qeshmBoundary?.path).toBe('')
     fireEvent.click(getByTestId('iran-map-island-qeshm'))

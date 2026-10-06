@@ -24,6 +24,7 @@ const IranMapWrapper: React.FC<MapProps> = ({
   waterBodies,
   landBackgrounds,
   landBackgroundColor,
+  viewBox,
   width,
   textColor,
   tooltipTitle,
@@ -47,14 +48,15 @@ const IranMapWrapper: React.FC<MapProps> = ({
   showIslandLabels,
   onIslandClick,
 }) => {
-  const mapScale = 1
+  const [, , viewWidth, viewHeight] = viewBox.split(/\s+/).map(Number)
+  const mapScale = Math.max(0.12, Math.min(1, viewWidth / 1000, viewHeight / 825))
 
   return (
     <>
       <svg
         className='iran-map'
-        viewBox='0 0 1000 825'
         xmlns='http://www.w3.org/2000/svg'
+        viewBox={viewBox}
         role='img'
         aria-label={ariaLabel}
         style={{ width, height: 'auto', color: textColor }}

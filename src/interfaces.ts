@@ -106,6 +106,10 @@ export interface IranMapWrapperProps {
   mode?: IranMapMode
   regions?: IranMapRegion[]
   detailedCounties?: string[]
+  /** Restrict rendering to one province and fit the SVG view box around it. */
+  focusProvince?: string
+  /** Padding around a focused province in SVG view-box units. */
+  focusPadding?: number
   regionAggregation?: RegionAggregation
   textColor?: string
   defaultSelectedProvince?: string
@@ -158,6 +162,7 @@ export interface MapProps {
   waterBodies: IranMapWaterBody[]
   landBackgrounds: MapBoundary[]
   landBackgroundColor: string
+  viewBox: string
   width?: number | string
   textColor: string
   tooltipTitle: string

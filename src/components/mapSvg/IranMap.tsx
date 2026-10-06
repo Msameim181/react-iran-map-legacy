@@ -92,6 +92,20 @@ const getPublicIsland = (island: RenderableMapIsland): IranMapIsland => ({
   sourceId: island.sourceId,
 })
 
+const getPathBounds = (paths: string[], padding: number) => {
+  const coordinates = paths.flatMap((path) =>
+    Array.from(path.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g), (match) => [Number(match[1]), Number(match[2])]),
+  )
+  if (!coordinates.length) return '0 0 1000 825'
+  const xValues = coordinates.map(([x]) => x)
+  const yValues = coordinates.map(([, y]) => y)
+  const minX = Math.max(0, Math.min(...xValues) - padding)
+  const minY = Math.max(0, Math.min(...yValues) - padding)
+  const maxX = Math.min(1000, Math.max(...xValues) + padding)
+  const maxY = Math.min(825, Math.max(...yValues) + padding)
+  return `${minX} ${minY} ${Math.max(1, maxX - minX)} ${Math.max(1, maxY - minY)}`
+}
+
 const IranMap: React.FC<IranMapWrapperProps> = ({
   data,
   width,
@@ -100,6 +114,8 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
   mode = 'province',
   regions = [],
   detailedCounties = [],
+  focusProvince,
+  focusPadding = 28,
   regionAggregation = 'sum',
   defaultSelectedProvince,
   defaultSelectedArea,
@@ -131,6 +147,20 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
 }) => {
   const [selectedAreaId, setSelectedAreaId] = useState(defaultSelectedArea || defaultSelectedProvince)
 
+  const focusedProvince = useMemo(
+    () => (focusProvince ? provinceBoundaries.find((province) => matchesBoundary(province, focusProvince)) : undefined),
+    [focusProvince],
+  )
+
+  const viewBox = useMemo(() => {
+    if (!focusedProvince) return '0 0 1000 825'
+    const paths = [
+      focusedProvince.path,
+      ...iranIslands.filter((island) => island.provinceId === focusedProvince.id).map((island) => island.path),
+    ]
+    return getPathBounds(paths, focusPadding)
+  }, [focusPadding, focusedProvince])
+
   const areas = useMemo(() => {
     const provinceToRegion = new Map<string, IranMapRegion>()
     regions.forEach((region) => {
@@ -143,16 +173,18 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
     })
 
     const rawAreas: Array<Omit<RenderableMapArea, 'fill'>> = []
-    const scopedProvinces = provinceBoundaries
+    const scopedProvinces = focusedProvince ? [focusedProvince] : provinceBoundaries
 
     if (mode === 'county') {
-      countyBoundaries.forEach((county) => {
-        rawAreas.push({
-          ...county,
-          type: 'county',
-          value: getBoundaryValue(county, data),
+      countyBoundaries
+        .filter((county) => !focusedProvince || county.provinceId === focusedProvince.id)
+        .forEach((county) => {
+          rawAreas.push({
+            ...county,
+            type: 'county',
+            value: getBoundaryValue(county, data),
+          })
         })
-      })
     } else {
       scopedProvinces.forEach((province) => {
         const region = mode === 'region' ? provinceToRegion.get(province.id) : undefined
@@ -178,6 +210,7 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
 
       const detailSet = new Set(detailedCounties)
       countyBoundaries
+        .filter((county) => !focusedProvince || county.provinceId === focusedProvince.id)
         .filter((county) => Array.from(detailSet).some((key) => matchesBoundary(county, key)))
         .forEach((county) => {
           rawAreas.push({
@@ -203,11 +236,22 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
       }
       return { ...area, fill }
     })
-  }, [colorBands, colorRange, data, deactiveProvinceColor, detailedCounties, mode, regionAggregation, regions])
+  }, [
+    colorBands,
+    colorRange,
+    data,
+    deactiveProvinceColor,
+    detailedCounties,
+    focusedProvince,
+    mode,
+    regionAggregation,
+    regions,
+  ])
 
   const islands = useMemo<RenderableMapIsland[]>(() => {
     if (!showIslands) return []
     return iranIslands
+      .filter((island) => !focusedProvince || island.provinceId === focusedProvince.id)
       .map((island) => {
         const countyOwner = areas.find((area) => area.type === 'county' && area.id === island.countyId)
         const administrativeOwner = areas.find(
@@ -217,9 +261,12 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
         return area ? { ...island, area, fill: area.fill } : undefined
       })
       .filter((island): island is RenderableMapIsland => island !== undefined)
-  }, [areas, showIslands])
+  }, [areas, focusedProvince, showIslands])
 
-  const landBackgrounds = useMemo(() => (mode === 'county' ? provinceBoundaries : []), [mode])
+  const landBackgrounds = useMemo(
+    () => (mode === 'county' ? (focusedProvince ? [focusedProvince] : provinceBoundaries) : []),
+    [focusedProvince, mode],
+  )
 
   const handleSelect = (area: RenderableMapArea) => {
     setSelectedAreaId(area.id)
@@ -257,11 +304,17 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
 
   const capitals = useMemo<IranMapCapital[]>(() => {
     const activeLayer = capitalMarkers === 'auto' ? (mode === 'county' ? 'county' : 'province') : capitalMarkers
-    if (activeLayer === 'province') return provinceCapitalMarkers
-    if (activeLayer === 'county') return countyCapitalMarkers
-    if (activeLayer === 'both') return [...countyCapitalMarkers, ...provinceCapitalMarkers]
+    const provinceMarkers = focusedProvince
+      ? provinceCapitalMarkers.filter((capital) => capital.provinceId === focusedProvince.id)
+      : provinceCapitalMarkers
+    const countyMarkers = focusedProvince
+      ? countyCapitalMarkers.filter((capital) => capital.provinceId === focusedProvince.id)
+      : countyCapitalMarkers
+    if (activeLayer === 'province') return provinceMarkers
+    if (activeLayer === 'county') return countyMarkers
+    if (activeLayer === 'both') return [...countyMarkers, ...provinceMarkers]
     return []
-  }, [capitalMarkers, mode])
+  }, [capitalMarkers, focusedProvince, mode])
 
   return (
     <div className={`iran-map-wrapper ${className}`.trim()} style={{ width: width || 500 }}>
@@ -272,6 +325,7 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
         waterBodies={iranWaterBodies}
         landBackgrounds={landBackgrounds}
         landBackgroundColor={deactiveProvinceColor}
+        viewBox={viewBox}
         width='100%'
         textColor={textColor}
         tooltipTitle={tooltipTitle}
