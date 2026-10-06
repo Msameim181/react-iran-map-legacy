@@ -5,3 +5,4 @@ npm-debug.log
 .parcel-cache
 demo-dist
 .playwright-mcp/
+.DS_Store
