@@ -1,0 +1,19 @@
+Iran administrative boundary data
+=================================
+
+The generated map paths in this package are derived from OpenStreetMap data.
+This includes administrative boundaries, physical coastlines, Iranian islands,
+and the Persian Gulf, Gulf of Oman, Caspian Sea, and Strait of Hormuz water polygons.
+
+Copyright: OpenStreetMap contributors
+License: Open Data Commons Open Database License (ODbL) 1.0
+Source: https://www.openstreetmap.org/copyright
+High-resolution administrative source:
+https://github.com/hosseinhabibi2004/iran-geojson
+Physical coastline source: OpenStreetMap water relations
+Caspian Sea: https://www.openstreetmap.org/relation/3987743
+Persian Gulf: https://www.openstreetmap.org/relation/9326283
+Gulf of Oman: https://www.openstreetmap.org/relation/9326279
+Strait of Hormuz: https://www.openstreetmap.org/relation/9326284
+
+The application code remains licensed under the repository's MIT License.

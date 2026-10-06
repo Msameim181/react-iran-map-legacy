@@ -1,110 +1,201 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useMemo, useState } from 'react'
+import { countyBoundaries, provinceBoundaries } from '../../data/boundaries'
+import {
+  IranMapArea,
+  IranMapRegion,
+  IranMapWrapperProps,
+  MapBoundary,
+  RegionAggregation,
+  RenderableMapArea,
+} from '../../interfaces'
 import IranMapWrapper from './IranMapWrapper'
-import { provinces } from '../../data/provinces'
-import { IranMapWrapperProps, mapDataType, provinceType, selectedProvinceType } from '../../interfaces'
 import './iran-map.css'
+
+const getValue = (data: Record<string, number>, keys: Array<string | undefined>) => {
+  for (const key of keys) {
+    if (key !== undefined && Object.prototype.hasOwnProperty.call(data, key)) return data[key]
+  }
+  return undefined
+}
+
+const getBoundaryValue = (boundary: MapBoundary, data: Record<string, number>) =>
+  getValue(data, [
+    boundary.id,
+    boundary.id.includes('.') ? boundary.id.split('.').pop() : undefined,
+    boundary.code,
+    boundary.faName,
+    boundary.name,
+  ])
+
+const aggregate = (values: number[], operation: RegionAggregation) => {
+  if (!values.length) return undefined
+  if (operation === 'average') return values.reduce((total, value) => total + value, 0) / values.length
+  if (operation === 'min') return Math.min(...values)
+  if (operation === 'max') return Math.max(...values)
+  return values.reduce((total, value) => total + value, 0)
+}
+
+const getRegionValue = (region: IranMapRegion, data: Record<string, number>, operation: RegionAggregation) => {
+  const directValue = getValue(data, [region.id, region.faName, region.name])
+  if (directValue !== undefined) return directValue
+  const values = region.provinces
+    .map((provinceKey) => {
+      const province = provinceBoundaries.find(
+        (item) =>
+          item.id === provinceKey ||
+          item.code === provinceKey ||
+          item.faName === provinceKey ||
+          item.name === provinceKey,
+      )
+      return province ? getBoundaryValue(province, data) : undefined
+    })
+    .filter((value): value is number => value !== undefined)
+  return aggregate(values, operation)
+}
+
+const colorFromGradient = (value: number, min: number, max: number, rgb: string) => {
+  const alpha = min === max ? (value > 0 ? 1 : 0.1) : Math.max(0.1, Math.min(1, (value - min) / (max - min)))
+  return `rgba(${rgb}, ${alpha})`
+}
+
+const matchesBoundary = (boundary: MapBoundary, key: string) =>
+  boundary.id === key ||
+  boundary.id.split('.').pop() === key ||
+  boundary.faName === key ||
+  boundary.name === key ||
+  String(boundary.osmId) === key
 
 const IranMap: React.FC<IranMapWrapperProps> = ({
   data,
   width,
-  colorRange,
+  colorRange = '30, 70, 181',
+  mode = 'province',
+  regions = [],
+  detailedCounties = [],
+  regionAggregation = 'sum',
   defaultSelectedProvince,
+  defaultSelectedArea,
   textColor = '#000',
   deactiveProvinceColor = '#e6e6e6',
   selectedProvinceColor,
+  selectedAreaColor,
   tooltipTitle = '',
   selectProvinceHandler,
+  onSelect,
+  onHover,
+  strokeColor = '#ffffff',
+  strokeWidth = 0.8,
+  className = '',
+  ariaLabel = 'Interactive map of Iran',
+  showLabels,
 }) => {
-  const mapRef = useRef(null)
-  const [provinceName, setProvinceName] = useState<null | string>(null)
-  const [selectedProvince, setSelectedProvince] = useState<selectedProvinceType>({
-    name: defaultSelectedProvince ? defaultSelectedProvince : '',
-    faName: defaultSelectedProvince
-      ? provinces.find((province: provinceType) => province.provinceName === defaultSelectedProvince)?.provinceFaName
-      : '',
-  })
+  const [selectedAreaId, setSelectedAreaId] = useState(defaultSelectedArea || defaultSelectedProvince)
 
-  const pathMouseOverHandler = (event: any) => {
-    const path = event.target
-    setProvinceName(path.dataset.name)
-  }
-
-  const pathClickedHandle = (pathName: string) => {
-    setSelectedProvince({
-      faName: pathName,
-      name: provinces.find((province: provinceType) => province.provinceFaName === pathName)?.provinceName,
+  const areas = useMemo(() => {
+    const provinceToRegion = new Map<string, IranMapRegion>()
+    regions.forEach((region) => {
+      region.provinces.forEach((key) => {
+        const province = provinceBoundaries.find(
+          (item) => item.id === key || item.code === key || item.faName === key || item.name === key,
+        )
+        if (province && !provinceToRegion.has(province.id)) provinceToRegion.set(province.id, region)
+      })
     })
 
-    selectProvinceHandler &&
-      selectProvinceHandler({
-        faName: pathName,
-        name: provinces.find((province: provinceType) => province.provinceFaName === pathName)?.provinceName,
+    const rawAreas: Array<Omit<RenderableMapArea, 'fill'>> = []
+    const scopedProvinces = provinceBoundaries
+
+    if (mode === 'county') {
+      countyBoundaries.forEach((county) => {
+        rawAreas.push({
+          ...county,
+          type: 'county',
+          value: getBoundaryValue(county, data),
+        })
       })
-  }
-
-  const setPathBackgrounds = (svg: Element, mapData: mapDataType) => {
-    const polygons = svg.querySelectorAll('polygon')
-    const paths = svg.querySelectorAll('path')
-
-    const values = Object.values(mapData)
-    //@ts-ignore
-    const min = Math.min(...values)
-    const max = Math.max(...values)
-
-    const setColorHandler = (element: SVGPathElement) => {
-      const title = provinces.find((item: provinceType) => item.provinceFaName === element.getAttribute('data-name'))
-        ?.provinceName
-
-      const selectedItem = provinces.find(
-        (province: provinceType) => province.provinceFaName === selectedProvince.faName,
-      )?.provinceFaName
-
-      if (title) {
-        const count = mapData[title.trim()]
-        if (count === 0) {
-          element.style.fill = deactiveProvinceColor
+    } else {
+      scopedProvinces.forEach((province) => {
+        const region = mode === 'region' ? provinceToRegion.get(province.id) : undefined
+        if (region) {
+          rawAreas.push({
+            id: region.id,
+            name: region.name,
+            faName: region.faName || region.name,
+            type: 'region',
+            regionId: region.id,
+            provinceId: province.id,
+            path: province.path,
+            value: getRegionValue(region, data, regionAggregation),
+          })
         } else {
-          if (min !== max) {
-            const alpha = Math.max(0.1, Math.min(1, (count - min) / (max - min)))
-            const usageColor = `rgba(${colorRange}, ${alpha})`
-            element.style.fill = usageColor
-          } else {
-            const usageColor = `rgba(${colorRange}, ${min > 0 ? 1 : 0.1})`
-            element.style.fill = usageColor
-          }
+          rawAreas.push({
+            ...province,
+            type: 'province',
+            value: getBoundaryValue(province, data),
+          })
+        }
+      })
+
+      const detailSet = new Set(detailedCounties)
+      countyBoundaries
+        .filter((county) => Array.from(detailSet).some((key) => matchesBoundary(county, key)))
+        .forEach((county) => {
+          rawAreas.push({
+            ...county,
+            type: 'county',
+            value: getBoundaryValue(county, data),
+          })
+        })
+    }
+
+    const numericValues = rawAreas.map((area) => area.value).filter((value): value is number => value !== undefined)
+    const min = numericValues.length ? Math.min(...numericValues) : 0
+    const max = numericValues.length ? Math.max(...numericValues) : 0
+
+    return rawAreas.map((area) => {
+      let fill = deactiveProvinceColor
+      if (area.value !== undefined) {
+        if (area.value !== 0) {
+          fill = colorFromGradient(area.value, min, max, colorRange)
         }
       }
-      if (element.getAttribute('data-name') === selectedItem && selectedProvinceColor) {
-        element.style.fill = selectedProvinceColor
-      }
+      return { ...area, fill }
+    })
+  }, [colorRange, data, deactiveProvinceColor, detailedCounties, mode, regionAggregation, regions])
+
+  const handleSelect = (area: RenderableMapArea) => {
+    setSelectedAreaId(area.id)
+    const publicArea: IranMapArea = {
+      id: area.id,
+      name: area.name,
+      faName: area.faName,
+      type: area.type,
+      value: area.value,
+      provinceId: area.provinceId,
+      regionId: area.regionId,
+      code: area.code,
     }
-
-    paths.forEach((path: SVGPathElement) => {
-      setColorHandler(path)
-    })
-
-    polygons.forEach((polygon: SVGPathElement) => {
-      setColorHandler(polygon)
-    })
+    onSelect && onSelect(publicArea)
+    if (area.type === 'province' && selectProvinceHandler) {
+      selectProvinceHandler({ name: area.id, faName: area.faName })
+    }
   }
 
-  useEffect(() => {
-    if (mapRef.current) {
-      setPathBackgrounds(mapRef.current, data)
-    }
-  }, [mapRef, selectedProvince])
-
   return (
-    <div className='iran-map-wrapper' style={{ width: width ? width : 500 }}>
+    <div className={`iran-map-wrapper ${className}`.trim()} style={{ width: width || 500 }}>
       <IranMapWrapper
-        mapRef={mapRef}
+        areas={areas}
+        width='100%'
         textColor={textColor}
-        provinceName={provinceName}
-        pathClickedHandle={pathClickedHandle}
-        pathMouseOverHandler={pathMouseOverHandler}
-        data={data}
         tooltipTitle={tooltipTitle}
-        width={width}
+        strokeColor={strokeColor}
+        strokeWidth={strokeWidth}
+        selectedAreaId={selectedAreaId}
+        selectedAreaColor={selectedAreaColor || selectedProvinceColor}
+        onAreaClick={handleSelect}
+        onAreaHover={(area) => onHover && onHover(area)}
+        ariaLabel={ariaLabel}
+        showLabels={showLabels === undefined ? mode === 'province' : showLabels}
       />
     </div>
   )

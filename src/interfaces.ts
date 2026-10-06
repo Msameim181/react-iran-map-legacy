@@ -1,4 +1,9 @@
-/* eslint-disable @typescript-eslint/ban-types */
+export type IranMapMode = 'province' | 'county' | 'region'
+
+export type IranMapAreaType = 'province' | 'county' | 'region'
+
+export type RegionAggregation = 'sum' | 'average' | 'min' | 'max'
+
 export interface selectedProvinceType {
   name: string | undefined
   faName: string | undefined
@@ -13,25 +18,80 @@ export interface mapDataType {
   [key: string]: number
 }
 
+export interface MapBoundary {
+  id: string
+  name: string
+  faName: string
+  path: string
+  code?: string
+  provinceId?: string
+  osmId?: number
+  labelX?: number
+  labelY?: number
+}
+
+export interface IranMapRegion {
+  id: string
+  name: string
+  faName?: string
+  provinces: string[]
+}
+
+export interface IranMapArea {
+  id: string
+  name: string
+  faName: string
+  type: IranMapAreaType
+  value?: number
+  provinceId?: string
+  regionId?: string
+  code?: string
+}
+
 export interface IranMapWrapperProps {
-  data: {}
+  data: mapDataType
   width?: number | string
-  colorRange: string
+  /** Legacy RGB triplet used for automatic gradient coloring, e.g. "30, 70, 181". */
+  colorRange?: string
+  mode?: IranMapMode
+  regions?: IranMapRegion[]
+  detailedCounties?: string[]
+  regionAggregation?: RegionAggregation
   textColor?: string
   defaultSelectedProvince?: string
+  defaultSelectedArea?: string
   selectedProvinceColor?: string
+  selectedAreaColor?: string
   tooltipTitle?: string
-  selectProvinceHandler?: Function
+  selectProvinceHandler?: (province: selectedProvinceType) => void
+  onSelect?: (area: IranMapArea) => void
+  onHover?: (area: IranMapArea | null) => void
   deactiveProvinceColor?: string
+  strokeColor?: string
+  strokeWidth?: number
+  className?: string
+  ariaLabel?: string
+  showLabels?: boolean
+}
+
+export interface RenderableMapArea extends IranMapArea {
+  path: string
+  fill: string
+  labelX?: number
+  labelY?: number
 }
 
 export interface MapProps {
+  areas: RenderableMapArea[]
+  width?: number | string
   textColor: string
-  mapRef: React.RefObject<any>
-  provinceName: null | string
-  pathClickedHandle: Function
-  pathMouseOverHandler: Function
-  data: {}
-  tooltipTitle: undefined | string
-  width: number | string | undefined
+  tooltipTitle: string
+  strokeColor: string
+  strokeWidth: number
+  selectedAreaId?: string
+  selectedAreaColor?: string
+  onAreaClick: (area: RenderableMapArea) => void
+  onAreaHover: (area: RenderableMapArea | null) => void
+  ariaLabel: string
+  showLabels: boolean
 }
