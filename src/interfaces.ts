@@ -37,6 +37,14 @@ export interface IranMapRegion {
   provinces: string[]
 }
 
+/** A half-open numeric interval: min is inclusive and max is exclusive. */
+export interface IranMapColorBand {
+  min?: number
+  max?: number
+  color: string
+  label?: string
+}
+
 export interface IranMapArea {
   id: string
   name: string
@@ -53,6 +61,7 @@ export interface IranMapWrapperProps {
   width?: number | string
   /** Legacy RGB triplet used for automatic gradient coloring, e.g. "30, 70, 181". */
   colorRange?: string
+  colorBands?: IranMapColorBand[]
   mode?: IranMapMode
   regions?: IranMapRegion[]
   detailedCounties?: string[]

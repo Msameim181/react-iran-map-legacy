@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { countyBoundaries, provinceBoundaries } from '../../data/boundaries'
 import {
   IranMapArea,
+  IranMapColorBand,
   IranMapRegion,
   IranMapWrapperProps,
   MapBoundary,
@@ -53,6 +54,10 @@ const getRegionValue = (region: IranMapRegion, data: Record<string, number>, ope
   return aggregate(values, operation)
 }
 
+const colorFromBand = (value: number, bands: IranMapColorBand[]) =>
+  bands.find((band) => (band.min === undefined || value >= band.min) && (band.max === undefined || value < band.max))
+    ?.color
+
 const colorFromGradient = (value: number, min: number, max: number, rgb: string) => {
   const alpha = min === max ? (value > 0 ? 1 : 0.1) : Math.max(0.1, Math.min(1, (value - min) / (max - min)))
   return `rgba(${rgb}, ${alpha})`
@@ -69,6 +74,7 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
   data,
   width,
   colorRange = '30, 70, 181',
+  colorBands,
   mode = 'province',
   regions = [],
   detailedCounties = [],
@@ -155,13 +161,15 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
     return rawAreas.map((area) => {
       let fill = deactiveProvinceColor
       if (area.value !== undefined) {
-        if (area.value !== 0) {
+        if (colorBands && colorBands.length) {
+          fill = colorFromBand(area.value, colorBands) || deactiveProvinceColor
+        } else if (area.value !== 0) {
           fill = colorFromGradient(area.value, min, max, colorRange)
         }
       }
       return { ...area, fill }
     })
-  }, [colorRange, data, deactiveProvinceColor, detailedCounties, mode, regionAggregation, regions])
+  }, [colorBands, colorRange, data, deactiveProvinceColor, detailedCounties, mode, regionAggregation, regions])
 
   const handleSelect = (area: RenderableMapArea) => {
     setSelectedAreaId(area.id)

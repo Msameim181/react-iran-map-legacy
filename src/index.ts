@@ -5,6 +5,7 @@ export { countyBoundaries, provinceBoundaries } from './data/boundaries'
 export type {
   IranMapArea,
   IranMapAreaType,
+  IranMapColorBand,
   IranMapMode,
   IranMapRegion,
   IranMapWrapperProps,

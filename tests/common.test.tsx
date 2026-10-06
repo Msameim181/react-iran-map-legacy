@@ -82,6 +82,22 @@ describe('IranMap', () => {
     expect(getByTestId('iran-map-county-razaviKhorasan.mashhad')).toBeTruthy()
   })
 
+  it('uses explicit threshold colors', () => {
+    const { getByTestId } = render(
+      <IranMap
+        data={provinceData}
+        colorBands={[
+          { max: 50, color: '#facc15' },
+          { min: 50, max: 70, color: '#ef4444' },
+          { min: 70, max: 80, color: '#22c55e' },
+          { min: 80, color: '#166534' },
+        ]}
+      />,
+    )
+
+    expect(getByTestId('iran-map-province-tehran').getAttribute('fill')).toBe('#ef4444')
+  })
+
   it('groups provinces into an interactive region and supports county detail', () => {
     const onSelect = jest.fn()
     const { getAllByTestId, getByTestId } = render(
