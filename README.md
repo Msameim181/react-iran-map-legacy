@@ -15,6 +15,8 @@ The component remains backward compatible with the original province-based API.
 - **Province focus:** fit the map to a single province, with selected counties or all its counties.
 - **Custom regions:** group provinces and aggregate values by sum, average, minimum, or maximum.
 - **Choropleth colors:** configurable score ranges, colors, labels, and missing-data fallback.
+- **Reusable score-band component:** standalone legend or controlled editor for 0–100 scores and arbitrary numeric x–y ranges.
+- **No-data values:** missing, `null`, or `-1` values render gray; province and county availability can be toggled independently in the demo.
 - **Capital markers:** optional province capitals and county administrative centers, with coordinates and selection callbacks.
 - **Geographic context:** Caspian Sea, Persian Gulf, Gulf of Oman, Strait of Hormuz, and 17 independent island objects linked to their administrative owners.
 - **Detailed SVG geometry:** high-detail coastlines and boundaries with thin, rounded, non-scaling strokes.
@@ -36,7 +38,15 @@ npm run demo -- --host 0.0.0.0
 
 Open `http://localhost:5173/`, or use your machine's network IP to access the demo from another device.
 
-Choose a layer mode in the left panel, toggle capital points or geographic context, and click an area, capital, or island to inspect its details. In **Province focus**, use the **Focused Ostan** selector to choose a province.
+Choose a layer mode in the left panel, toggle capital points or geographic context, and click an area, capital, or island to inspect its details. In **Province focus**, use the **Focused Ostan** selector to choose a province, search its county list in English or Persian, and enable the counties you want to display. Edit each enabled county's numeric value to update its color immediately, or use **Enable all counties** / **Clear selection**. Selections and values are preserved when switching provinces or modes during the session; refreshing the page restores the demo defaults.
+
+Clicking a province, county, or region selects it; clicking it again unselects it. Clicking outside the map or on its empty/water background also clears the selected area. Keyboard Enter/Space toggles selection in the same way. County visibility/value settings are not reset by deselection.
+
+Use `onDeselect={() => setSelectedArea(null)}` to clear selection in your own UI. `onSelect` still receives only selected areas, and `onHover(null)` clears any stale hover readout when deselecting. The legacy `selectProvinceHandler` receives `{ name: undefined, faName: undefined }` when a province is deselected.
+
+Use **Metric name** to rename “Score” to Population, Revenue, or another label. The demo updates the tooltips, legend heading, county-input labels, and inspection readout together. The example color thresholds stay unchanged; adapt `colorBands` to your metric's actual ranges.
+
+In **Province focus**, turn off **Use province value** to leave the province gray while keeping the selected counties colored. A county's **No data** checkbox keeps its boundary visible but gray, independently of its **Show** checkbox. You can also enter `-1` to mark a value as missing. Choose **Metric scale** and open **Edit bands** to change thresholds, colors, and labels. Numeric mode accepts custom x–y domains, negative values, and decimals; switching back to Score restores the 0–100 demo preset.
 
 ## Installation
 
@@ -152,6 +162,12 @@ Provinces not assigned to a custom region remain individually interactive.
 
 ## Configurable color bands
 
+“Score” is just a label, not a fixed metric. In your own app, set `tooltipTitle` to any text; `data` still supplies the numeric values:
+
+```tsx
+<IranMap data={populationByProvince} tooltipTitle='Population:' />
+```
+
 Color bands are evaluated in array order. `min` is inclusive and `max` is exclusive, so `{ min: 50, max: 70 }` represents `50 <= value < 70`.
 
 ```tsx
@@ -165,7 +181,77 @@ const colorBands = [
 <IranMap data={provinceData} colorBands={colorBands} />
 ```
 
-If `colorBands` is omitted, the legacy `colorRange='30, 70, 181'` RGB gradient is used. Missing values, unmatched bands, and zero values in legacy-gradient mode use `deactiveProvinceColor`.
+If `colorBands` is omitted, the `colorRange='30, 70, 181'` RGB gradient is used. Missing values and unmatched bands use `deactiveProvinceColor`. Zero is a valid numeric value, including in gradient mode.
+
+## Missing values: gray means no data
+
+`data` accepts `number | null | undefined`. A missing key, `null`, `undefined`, or the sentinel `-1` means **no data**; non-finite numbers are treated the same way. These areas use `deactiveProvinceColor` (gray `#e6e6e6` by default), remain gray when selected, and show “No data” in area tooltips. Their islands inherit the same no-data color. Selection/hover callbacks expose `value: undefined` for missing data.
+
+```tsx
+<IranMap
+  focusProvince='razaviKhorasan'
+  detailedCounties={['razaviKhorasan.mashhad', 'razaviKhorasan.neyshabur']}
+  data={{
+    razaviKhorasan: null, // Province stays gray
+    'razaviKhorasan.mashhad': 85, // County has data
+    'razaviKhorasan.neyshabur': -1, // County has no data
+  }}
+  colorBands={colorBands}
+/>
+```
+
+Missing values are excluded from gradients and region aggregation; zero is included. An explicitly missing region value does not fall back to aggregating its provinces. Other finite negative numbers are valid in numeric mode, but `-1` is reserved for no data.
+
+## Standalone score-band legend and editor
+
+`ScoreBands` is an exported React component, independent of the map. Place it in any sidebar, toolbar, settings panel, or separate page. Share the same band state with `IranMap` to keep colors synchronized.
+
+```tsx
+import React, { useState } from 'react'
+import { IranMap, ScoreBands } from 'react-iran-map'
+import type { IranMapColorBand } from 'react-iran-map'
+
+export function RevenueMap() {
+  const [bands, setBands] = useState<IranMapColorBand[]>([
+    { max: 0, color: '#ef4444', label: 'Negative' },
+    { min: 0, max: 1000, color: '#facc15', label: 'Below target' },
+    { min: 1000, color: '#166534', label: 'On target' },
+  ])
+
+  return (
+    <>
+      <ScoreBands
+        bands={bands}
+        onChange={setBands}
+        scale='numeric'
+        min={-500}
+        max={5000}
+        metricLabel='Revenue'
+        formatValue={(value) => `${value} USD`}
+      />
+      <IranMap data={{ tehran: 1500, fars: 0, bushehr: null }} colorBands={bands} tooltipTitle='Revenue:' />
+    </>
+  )
+}
+```
+
+Omit `onChange` for a read-only legend. Use `scale='score'` for 0–100 thresholds, or `scale='numeric'` for arbitrary finite thresholds, including decimals and negative numbers. Numeric `min`/`max` set the displayed x–y domain; they do not rescale, clamp, or normalize your data or thresholds. Open-ended bands can extend beyond that displayed domain. Intervals stay half-open (`min` inclusive, `max` exclusive); leave the final `max` blank to include a score of 100 and larger values.
+
+The controlled editor supports bounds, labels, colors, adding/removing bands, and unbounded intervals. Invalid threshold drafts do not call `onChange`; overlapping bands retain the map's first-match behavior. Changing values supplied from outside the component resets its temporary drafts.
+
+| Prop                 | Default        | Purpose                                                    |
+| -------------------- | -------------- | ---------------------------------------------------------- |
+| `bands`              | required       | Same `IranMapColorBand[]` accepted by the map              |
+| `onChange`           | omitted        | Enable a controlled editor; parent must update `bands`     |
+| `scale`              | `'score'`      | `'score'` (0–100) or `'numeric'` (arbitrary finite bounds) |
+| `min`, `max`         | `0`, `100`     | Display-domain endpoints, with `min < max`                 |
+| `metricLabel`        | `'Score'`      | Rename the metric heading                                  |
+| `orientation`        | `'horizontal'` | Horizontal or vertical legend layout                       |
+| `formatValue`        | `String`       | Format domain and interval labels, e.g. currency or units  |
+| `showNoData`         | `true`         | Show the no-data legend key                                |
+| `noDataColor`        | `'#e6e6e6'`    | Match the map's `deactiveProvinceColor`                    |
+| `noDataLabel`        | `'No data'`    | Customize the missing-data legend text                     |
+| `className`, `style` | omitted        | Placement and styling hooks                                |
 
 ## Capital and administrative-center markers
 
@@ -209,7 +295,7 @@ Set any of the `show*` options to `false` for a boundaries-only view. Tiny islan
 
 | Prop                    | Type                                                   | Default         | Description                                          |
 | ----------------------- | ------------------------------------------------------ | --------------- | ---------------------------------------------------- |
-| `data`                  | `Record<string, number>`                               | required        | Values keyed by province, county, or region ID/name  |
+| `data`                  | `Record<string, IranMapValue>`                         | required        | Numbers or null/undefined; -1 means no data          |
 | `mode`                  | `'province' \| 'county' \| 'region'`                   | `'province'`    | Nationwide display mode                              |
 | `regions`               | `IranMapRegion[]`                                      | `[]`            | Custom groups of provinces                           |
 | `detailedCounties`      | `string[]`                                             | `[]`            | Counties overlaid in province or region mode         |
@@ -219,8 +305,10 @@ Set any of the `show*` options to `false` for a boundaries-only view. Tiny islan
 | `colorRange`            | RGB triplet string                                     | `'30, 70, 181'` | Legacy automatic gradient color                      |
 | `regionAggregation`     | `'sum' \| 'average' \| 'min' \| 'max'`                 | `'sum'`         | Fallback calculation for region values               |
 | `onSelect`              | `(area) => void`                                       | —               | Receives province, county, or region selection       |
+| `onDeselect`            | `() => void`                                           | —               | Called on toggle-off or outside/background click     |
 | `onHover`               | `(area \| null) => void`                               | —               | Receives hover/focus changes                         |
 | `width`                 | `number \| string`                                     | `500`           | Map width                                            |
+| `tooltipTitle`          | `string`                                               | `''`            | Custom area-tooltip label, e.g. Population:          |
 | `selectedAreaColor`     | `string`                                               | —               | Selected area fill                                   |
 | `deactiveProvinceColor` | `string`                                               | `'#e6e6e6'`     | Fill for missing/inactive values                     |
 | `strokeColor`           | `string`                                               | `'#ffffff'`     | Boundary color                                       |
