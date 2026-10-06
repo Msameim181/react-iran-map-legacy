@@ -82,7 +82,8 @@
   font-weight: 700;
   paint-order: stroke;
   stroke: rgba(255, 255, 255, 0.92);
-  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .iran-map-capital {
@@ -128,7 +129,8 @@
   font-weight: 700;
   paint-order: stroke;
   stroke: rgba(255, 255, 255, 0.92);
-  stroke-width: 2.5px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .iran-map-label {
@@ -137,7 +139,8 @@
   font-weight: 700;
   paint-order: stroke;
   stroke: rgba(255, 255, 255, 0.8);
-  stroke-width: 2.5px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .iran-map-tooltip {

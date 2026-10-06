@@ -185,6 +185,7 @@ const IranMapWrapper: React.FC<MapProps> = ({
                     fill={textColor}
                     textAnchor='middle'
                     fontSize={7 * mapScale}
+                    strokeWidth={1.25 * mapScale}
                   >
                     {island.faName}
                   </text>
@@ -205,6 +206,7 @@ const IranMapWrapper: React.FC<MapProps> = ({
                 textAnchor='middle'
                 dominantBaseline='middle'
                 fontSize={12 * mapScale}
+                strokeWidth={1.25 * mapScale}
               >
                 {area.faName}
               </text>
@@ -255,6 +257,7 @@ const IranMapWrapper: React.FC<MapProps> = ({
                   y={-size * 1.5}
                   fill={textColor}
                   fontSize={10 * mapScale}
+                  strokeWidth={1.25 * mapScale}
                 >
                   {capital.faName}
                 </text>
