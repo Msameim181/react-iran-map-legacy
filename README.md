@@ -1,27 +1,54 @@
-# React Iran Map
+# Best Iran Map
 
 An interactive, responsive SVG map of Iran for React. It supports nationwide province and county views, custom regions made from provinces, selective county detail on top of a province or region map, configurable choropleth color bands, optional province-capital and county-center markers, and geographic context for Iran's surrounding waters and islands.
 
 The component remains backward compatible with the original province-based API.
 
-## Live local demo
+[**Open the live demo →**](https://msameim181.github.io/best-iran-map/)
 
-The repository includes an interactive React demo covering province, county, mixed-detail, and custom-region modes.
+![Best Iran Map demo showing province colors, selected county detail, capital markers, surrounding seas, and independent islands](docs/images/demo-mixed.webp)
+
+## Features
+
+- **Whole-country views:** 31 Ostans (provinces) or 478 Shahrestan (county) boundaries.
+- **Mixed detail:** show one or more selected counties within province or custom-region views.
+- **Province focus:** fit the map to a single province, with selected counties or all its counties.
+- **Custom regions:** group provinces and aggregate values by sum, average, minimum, or maximum.
+- **Choropleth colors:** configurable score ranges, colors, labels, and missing-data fallback.
+- **Capital markers:** optional province capitals and county administrative centers, with coordinates and selection callbacks.
+- **Geographic context:** Caspian Sea, Persian Gulf, Gulf of Oman, Strait of Hormuz, and 17 independent island objects linked to their administrative owners.
+- **Detailed SVG geometry:** high-detail coastlines and boundaries with thin, rounded, non-scaling strokes.
+- **Interaction and accessibility:** tooltips, keyboard selection, hover/click callbacks, Persian labels, and responsive sizing.
+- **React + TypeScript:** typed props and exported boundary, capital, island, and water catalogs. Vue support is not included yet.
+
+![Nationwide Shahrestan view in the interactive demo](docs/images/demo-counties.webp)
+
+## Run the demo locally
+
+Use Node.js 22 or newer. The demo includes five modes: provinces, counties, mixed detail, province focus, and custom regions. Its scores are synthetic examples, not real health or statistical data.
 
 ```bash
-npm install
-npm run demo
+git clone https://github.com/Msameim181/best-iran-map.git
+cd best-iran-map
+npm ci
+npm run demo -- --host 0.0.0.0
 ```
 
-Then open `http://127.0.0.1:5173/`. A production demo build can be verified with `npm run demo:build`.
+Open `http://localhost:5173/`, or use your machine's network IP to access the demo from another device.
+
+Choose a layer mode in the left panel, toggle capital points or geographic context, and click an area, capital, or island to inspect its details. In **Province focus**, use the **Focused Ostan** selector to choose a province.
 
 ## Installation
 
+Install this enhanced fork from GitHub:
+
 ```bash
-npm install react-iran-map
+npm install github:Msameim181/best-iran-map#main
 ```
 
-## Province map
+The package/import name remains `react-iran-map`. The original npm release does not contain this fork's new features. For reproducible deployments, replace `main` with a specific commit SHA. Git installs build the package through its `prepare` script and require Node.js 22 or newer.
+
+## Usage: province map
 
 ```tsx
 import { IranMap } from 'react-iran-map'
@@ -241,3 +268,22 @@ Administrative boundaries, physical coastlines, water bodies, and coordinate cor
 These boundaries are appropriate for detailed thematic cartography, but they are not cadastral, hydrographic, surveying, or legally authoritative boundaries.
 
 Application code is MIT licensed.
+
+## Development and deployment
+
+```bash
+npm test -- --runInBand             # Component and geometry regression tests
+npm run lint                       # Lint source, tests, demo, and scripts
+npm run build                      # ESM/CJS library and TypeScript declarations
+npm run demo:build                 # Static demo in demo-dist/
+```
+
+The [GitHub Pages workflow](.github/workflows/pages.yml) tests, lints, builds, and deploys the demo whenever a commit is pushed to `main`. It can also be run manually from the repository's Actions tab. Only the demo is published; this does not publish a new npm release.
+
+The Pages build uses `/best-iran-map/` as its Vite base path:
+
+```bash
+npm run demo:build -- --base /best-iran-map/
+```
+
+If you fork or rename the repository, update that base path in the workflow and the live-demo link above. The development server continues to use `/`.
