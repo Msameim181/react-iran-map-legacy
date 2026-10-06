@@ -152,10 +152,42 @@ describe('IranMap', () => {
     )
   })
 
+  it('renders the surrounding waters and physical Iranian island coastlines', () => {
+    const { container, getByTestId } = render(<IranMap data={provinceData} />)
+
+    expect(container.querySelectorAll('[data-water-id]')).toHaveLength(4)
+    expect(container.querySelectorAll('[data-island-id]')).toHaveLength(17)
+    expect(getByTestId('iran-map-island-qeshm').getAttribute('data-province-id')).toBe('hormozgan')
+    expect(getByTestId('iran-map-island-farsi').getAttribute('data-latitude')).toBe('27.993096')
+  })
+
+  it('selects an island through its active province or county layer', () => {
+    const onSelect = jest.fn()
+    const onIslandSelect = jest.fn()
+    const { getByTestId } = render(<IranMap data={provinceData} onSelect={onSelect} onIslandSelect={onIslandSelect} />)
+
+    fireEvent.click(getByTestId('iran-map-island-qeshm'))
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'hormozgan', type: 'province' }))
+    expect(onIslandSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'qeshm', countyId: 'hormozgan.qeshm' }),
+      expect.objectContaining({ id: 'hormozgan' }),
+    )
+  })
+
   it('does not render the former Bushehr maritime envelope as a detached dot', () => {
     const bushehr = provinceBoundaries.find((province) => province.id === 'bushehr')
 
     expect(bushehr?.path.match(/M[^Z]+Z/g)).toHaveLength(1)
+  })
+
+  it('keeps island land separate while linking it to its county color and selection', () => {
+    const onSelect = jest.fn()
+    const qeshmBoundary = countyBoundaries.find((county) => county.id === 'hormozgan.qeshm')
+    const { getByTestId } = render(<IranMap mode='county' data={{ 'hormozgan.qeshm': 72 }} onSelect={onSelect} />)
+
+    expect(qeshmBoundary?.path).toBe('')
+    fireEvent.click(getByTestId('iran-map-island-qeshm'))
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'hormozgan.qeshm', type: 'county', value: 72 }))
   })
 
   it('retains high-detail province and Shahrestan geometry', () => {

@@ -34,6 +34,59 @@
   filter: brightness(0.92);
 }
 
+.iran-map-water-layer,
+.iran-map-water-label,
+.iran-map-land-background {
+  pointer-events: none;
+}
+
+.iran-map-water-label-fa {
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.iran-map-water-label-en {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.iran-map-island {
+  cursor: pointer;
+  outline: none;
+}
+
+.iran-map-island-hit {
+  fill: transparent;
+}
+
+.iran-map-island-shape {
+  transition:
+    filter 140ms ease,
+    opacity 140ms ease;
+}
+
+.iran-map-island:hover .iran-map-island-shape,
+.iran-map-island:focus-visible .iran-map-island-shape {
+  filter: brightness(0.9);
+  opacity: 0.88;
+}
+
+.iran-map-island:focus-visible .iran-map-island-shape {
+  stroke: #f2c15a;
+  stroke-width: 2;
+}
+
+.iran-map-island-label {
+  pointer-events: none;
+  font-family: inherit;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 2px;
+}
+
 .iran-map-capital {
   cursor: pointer;
   outline: none;

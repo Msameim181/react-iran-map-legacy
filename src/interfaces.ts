@@ -76,6 +76,27 @@ export interface IranMapCapital {
   sourceFeatureId: string
 }
 
+export interface IranMapWaterBody {
+  id: string
+  name: string
+  faName: string
+  path: string
+  labelX: number
+  labelY: number
+  showLabel?: boolean
+}
+
+export interface IranMapIsland extends MapBoundary {
+  provinceId: string
+  countyId: string
+  longitude: number
+  latitude: number
+  labelX: number
+  labelY: number
+  featured: boolean
+  sourceId: string
+}
+
 export interface IranMapWrapperProps {
   data: mapDataType
   width?: number | string
@@ -107,6 +128,15 @@ export interface IranMapWrapperProps {
   capitalMarkerSize?: number
   showCapitalLabels?: boolean
   onCapitalSelect?: (capital: IranMapCapital) => void
+  /** Render the Persian Gulf, Gulf of Oman, and Caspian Sea as geographic context. */
+  showWater?: boolean
+  waterColor?: string
+  seaLabelColor?: string
+  showSeaLabels?: boolean
+  /** Render physical Iranian island coastlines associated with their administrative owner. */
+  showIslands?: boolean
+  showIslandLabels?: boolean
+  onIslandSelect?: (island: IranMapIsland, area: IranMapArea) => void
 }
 
 export interface RenderableMapArea extends IranMapArea {
@@ -116,9 +146,18 @@ export interface RenderableMapArea extends IranMapArea {
   labelY?: number
 }
 
+export interface RenderableMapIsland extends IranMapIsland {
+  area: RenderableMapArea
+  fill: string
+}
+
 export interface MapProps {
   areas: RenderableMapArea[]
   capitals: IranMapCapital[]
+  islands: RenderableMapIsland[]
+  waterBodies: IranMapWaterBody[]
+  landBackgrounds: MapBoundary[]
+  landBackgroundColor: string
   width?: number | string
   textColor: string
   tooltipTitle: string
@@ -134,4 +173,11 @@ export interface MapProps {
   capitalMarkerSize: number
   showCapitalLabels: boolean
   onCapitalSelect?: (capital: IranMapCapital) => void
+  showWater: boolean
+  waterColor: string
+  seaLabelColor: string
+  showSeaLabels: boolean
+  showIslands: boolean
+  showIslandLabels: boolean
+  onIslandClick: (island: RenderableMapIsland) => void
 }

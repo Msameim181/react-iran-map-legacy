@@ -1,15 +1,18 @@
 import React, { useMemo, useState } from 'react'
 import { countyBoundaries, provinceBoundaries } from '../../data/boundaries'
 import { countyCapitalMarkers, provinceCapitalMarkers } from '../../data/capitals'
+import { iranIslands, iranWaterBodies } from '../../data/geography'
 import {
   IranMapArea,
   IranMapCapital,
   IranMapColorBand,
   IranMapRegion,
+  IranMapIsland,
   IranMapWrapperProps,
   MapBoundary,
   RegionAggregation,
   RenderableMapArea,
+  RenderableMapIsland,
 } from '../../interfaces'
 import IranMapWrapper from './IranMapWrapper'
 import './iran-map.css'
@@ -72,6 +75,23 @@ const matchesBoundary = (boundary: MapBoundary, key: string) =>
   boundary.name === key ||
   String(boundary.osmId) === key
 
+const getPublicIsland = (island: RenderableMapIsland): IranMapIsland => ({
+  id: island.id,
+  name: island.name,
+  faName: island.faName,
+  path: island.path,
+  code: island.code,
+  provinceId: island.provinceId,
+  osmId: island.osmId,
+  countyId: island.countyId,
+  longitude: island.longitude,
+  latitude: island.latitude,
+  labelX: island.labelX,
+  labelY: island.labelY,
+  featured: island.featured,
+  sourceId: island.sourceId,
+})
+
 const IranMap: React.FC<IranMapWrapperProps> = ({
   data,
   width,
@@ -101,6 +121,13 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
   capitalMarkerSize = 4,
   showCapitalLabels = false,
   onCapitalSelect,
+  showWater = true,
+  waterColor = '#dcebed',
+  seaLabelColor = '#477983',
+  showSeaLabels = true,
+  showIslands = true,
+  showIslandLabels = true,
+  onIslandSelect,
 }) => {
   const [selectedAreaId, setSelectedAreaId] = useState(defaultSelectedArea || defaultSelectedProvince)
 
@@ -178,6 +205,22 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
     })
   }, [colorBands, colorRange, data, deactiveProvinceColor, detailedCounties, mode, regionAggregation, regions])
 
+  const islands = useMemo<RenderableMapIsland[]>(() => {
+    if (!showIslands) return []
+    return iranIslands
+      .map((island) => {
+        const countyOwner = areas.find((area) => area.type === 'county' && area.id === island.countyId)
+        const administrativeOwner = areas.find(
+          (area) => area.type !== 'county' && (area.provinceId === island.provinceId || area.id === island.provinceId),
+        )
+        const area = countyOwner || administrativeOwner
+        return area ? { ...island, area, fill: area.fill } : undefined
+      })
+      .filter((island): island is RenderableMapIsland => island !== undefined)
+  }, [areas, showIslands])
+
+  const landBackgrounds = useMemo(() => (mode === 'county' ? provinceBoundaries : []), [mode])
+
   const handleSelect = (area: RenderableMapArea) => {
     setSelectedAreaId(area.id)
     const publicArea: IranMapArea = {
@@ -196,6 +239,22 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
     }
   }
 
+  const publicArea = (area: RenderableMapArea): IranMapArea => ({
+    id: area.id,
+    name: area.name,
+    faName: area.faName,
+    type: area.type,
+    value: area.value,
+    provinceId: area.provinceId,
+    regionId: area.regionId,
+    code: area.code,
+  })
+
+  const handleIslandSelect = (island: RenderableMapIsland) => {
+    handleSelect(island.area)
+    onIslandSelect && onIslandSelect(getPublicIsland(island), publicArea(island.area))
+  }
+
   const capitals = useMemo<IranMapCapital[]>(() => {
     const activeLayer = capitalMarkers === 'auto' ? (mode === 'county' ? 'county' : 'province') : capitalMarkers
     if (activeLayer === 'province') return provinceCapitalMarkers
@@ -209,6 +268,10 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
       <IranMapWrapper
         areas={areas}
         capitals={capitals}
+        islands={islands}
+        waterBodies={iranWaterBodies}
+        landBackgrounds={landBackgrounds}
+        landBackgroundColor={deactiveProvinceColor}
         width='100%'
         textColor={textColor}
         tooltipTitle={tooltipTitle}
@@ -224,6 +287,13 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
         capitalMarkerSize={capitalMarkerSize}
         showCapitalLabels={showCapitalLabels}
         onCapitalSelect={onCapitalSelect}
+        showWater={showWater}
+        waterColor={waterColor}
+        seaLabelColor={seaLabelColor}
+        showSeaLabels={showSeaLabels}
+        showIslands={showIslands}
+        showIslandLabels={showIslandLabels}
+        onIslandClick={handleIslandSelect}
       />
     </div>
   )
