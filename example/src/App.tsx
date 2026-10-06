@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { IranMap, countyBoundaries, provinceBoundaries } from '../../src'
+import { IranMap, ScoreBands, countyBoundaries, provinceBoundaries } from '../../src'
 import type {
   IranMapArea,
   IranMapCapital,
@@ -7,7 +7,11 @@ import type {
   IranMapIsland,
   IranMapMode,
   IranMapRegion,
+  IranMapValue,
+  IranMapColorBand,
 } from '../../src'
+import { normalizeMapValue } from '../../src/utils/mapValues'
+import CountyEditor from './CountyEditor'
 
 type DemoMode = IranMapMode | 'mixed' | 'focus'
 
@@ -43,7 +47,7 @@ const capitalLayers: Array<{ id: IranMapCapitalLayer; label: string }> = [
   { id: 'none', label: 'Off' },
 ]
 
-const colorBands = [
+const defaultColorBands: IranMapColorBand[] = [
   { max: 25, color: '#bedfd5', label: 'Low' },
   { min: 25, max: 50, color: '#75b9ad', label: 'Watch' },
   { min: 50, max: 70, color: '#f2c15a', label: 'Elevated' },
@@ -57,7 +61,7 @@ const provinceData = Object.fromEntries(
 
 const countyData = Object.fromEntries(countyBoundaries.map((county, index) => [county.id, (index * 23 + 11) % 101]))
 
-const demoData = {
+const demoData: Record<string, number> = {
   ...provinceData,
   ...countyData,
   'greater-khorasan': 76,
@@ -76,12 +80,52 @@ const App: React.FC = () => {
   const [showGeography, setShowGeography] = useState(true)
   const [selectedIsland, setSelectedIsland] = useState<IranMapIsland | null>(null)
   const [focusProvinceId, setFocusProvinceId] = useState('razaviKhorasan')
+  const [enabledCounties, setEnabledCounties] = useState<Record<string, boolean>>(
+    Object.fromEntries(focusCounties.map((id) => [id, true])),
+  )
+  const [valueOverrides, setValueOverrides] = useState<Record<string, IranMapValue>>({})
+  const [valueDrafts, setValueDrafts] = useState<Record<string, string>>({})
+  const [disabledProvinceValues, setDisabledProvinceValues] = useState<Record<string, boolean>>({})
+  const [colorBands, setColorBands] = useState(defaultColorBands)
+  const [bandScale, setBandScale] = useState<'score' | 'numeric'>('score')
+  const [domainMin, setDomainMin] = useState(0)
+  const [domainMax, setDomainMax] = useState(100)
+  const [metricLabel, setMetricLabel] = useState('Score')
+  const metricName = metricLabel.trim() || 'Score'
+  const data = useMemo<Record<string, IranMapValue>>(
+    () => ({
+      ...demoData,
+      ...valueOverrides,
+      ...(demoMode === 'focus' && disabledProvinceValues[focusProvinceId] ? { [focusProvinceId]: null } : {}),
+    }),
+    [demoMode, disabledProvinceValues, focusProvinceId, valueOverrides],
+  )
+  const provinceCounties = useMemo(
+    () => countyBoundaries.filter((county) => county.provinceId === focusProvinceId),
+    [focusProvinceId],
+  )
+  const selectedCountyIds = provinceCounties.filter((county) => enabledCounties[county.id]).map((county) => county.id)
+
+  const clearInspection = () => {
+    setSelectedArea(null)
+    setHoveredArea(null)
+    setSelectedCapital(null)
+    setSelectedIsland(null)
+  }
 
   const activeMode = useMemo<IranMapMode>(
     () => (demoMode === 'mixed' || demoMode === 'focus' ? 'province' : demoMode),
     [demoMode],
   )
-  const activeArea = hoveredArea || selectedArea
+  const inspectedArea = hoveredArea || selectedArea
+  const activeArea = inspectedArea
+    ? {
+        ...inspectedArea,
+        value: Object.prototype.hasOwnProperty.call(data, inspectedArea.id)
+          ? normalizeMapValue(data[inspectedArea.id])
+          : inspectedArea.value,
+      }
+    : null
   const activeModeCopy = modes.find((mode) => mode.id === demoMode)
   const activeCapital = hoveredArea ? null : selectedCapital
 
@@ -129,7 +173,7 @@ const App: React.FC = () => {
                 className={`mode-option ${demoMode === mode.id ? 'is-active' : ''}`}
                 onClick={() => {
                   setDemoMode(mode.id)
-                  setHoveredArea(null)
+                  clearInspection()
                 }}
               >
                 <span className='mode-number'>{String(index + 1).padStart(2, '0')}</span>
@@ -143,23 +187,38 @@ const App: React.FC = () => {
           </div>
 
           {demoMode === 'focus' && (
-            <label className='focus-picker'>
-              <span className='panel-kicker'>Focused Ostan</span>
-              <select
-                value={focusProvinceId}
-                onChange={(event) => {
-                  setFocusProvinceId(event.target.value)
-                  setSelectedArea(null)
-                  setSelectedIsland(null)
-                }}
-              >
-                {provinceBoundaries.map((province) => (
-                  <option key={province.id} value={province.id}>
-                    {province.name} — {province.faName}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className='focus-controls'>
+              <label className='focus-picker'>
+                <span className='panel-kicker'>Focused Ostan</span>
+                <select
+                  value={focusProvinceId}
+                  onChange={(event) => {
+                    setFocusProvinceId(event.target.value)
+                    clearInspection()
+                  }}
+                >
+                  {provinceBoundaries.map((province) => (
+                    <option key={province.id} value={province.id}>
+                      {province.name} — {province.faName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className='province-value-toggle'>
+                <input
+                  type='checkbox'
+                  checked={!disabledProvinceValues[focusProvinceId]}
+                  onChange={(event) => {
+                    setDisabledProvinceValues((current) => ({ ...current, [focusProvinceId]: !event.target.checked }))
+                    clearInspection()
+                  }}
+                />
+                <span>Use province value</span>
+              </label>
+              <p className='province-value-help'>
+                Turn off to leave the province gray and color only its selected counties.
+              </p>
+            </div>
           )}
 
           <div className='capital-control'>
@@ -213,23 +272,76 @@ const App: React.FC = () => {
           </div>
 
           <div className='legend-block'>
-            <p className='panel-kicker'>Configurable score bands</p>
-            <div className='legend-scale' aria-label='Map color legend'>
-              {colorBands.map((band) => (
-                <span key={band.label} style={{ backgroundColor: band.color }} title={band.label} />
-              ))}
-            </div>
-            <div className='legend-labels'>
-              <span>0</span>
-              <span>25</span>
-              <span>50</span>
-              <span>70</span>
-              <span>85+</span>
-            </div>
+            <label className='metric-picker'>
+              <span className='panel-kicker'>Metric name</span>
+              <input
+                type='text'
+                value={metricLabel}
+                maxLength={60}
+                placeholder='Score'
+                onChange={(event) => setMetricLabel(event.target.value)}
+              />
+            </label>
+            <label className='metric-picker'>
+              <span className='panel-kicker'>Metric scale</span>
+              <select
+                value={bandScale}
+                onChange={(event) => {
+                  const scale = event.target.value as 'score' | 'numeric'
+                  setBandScale(scale)
+                  if (scale === 'score') setColorBands(defaultColorBands)
+                }}
+              >
+                <option value='score'>Score: 0–100</option>
+                <option value='numeric'>Numeric: custom x–y</option>
+              </select>
+            </label>
+            {bandScale === 'numeric' && (
+              <div className='metric-domain'>
+                <label>
+                  Domain minimum
+                  <input
+                    type='number'
+                    step='any'
+                    value={domainMin}
+                    onChange={(event) => setDomainMin(Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  Domain maximum
+                  <input
+                    type='number'
+                    step='any'
+                    value={domainMax}
+                    onChange={(event) => setDomainMax(Number(event.target.value))}
+                  />
+                </label>
+              </div>
+            )}
+            <ScoreBands
+              bands={colorBands}
+              metricLabel={metricName}
+              scale={bandScale}
+              min={bandScale === 'score' ? 0 : domainMin}
+              max={bandScale === 'score' ? 100 : domainMax}
+              orientation='vertical'
+            />
+            <details className='demo-band-editor'>
+              <summary>Edit bands</summary>
+              <ScoreBands
+                bands={colorBands}
+                onChange={setColorBands}
+                metricLabel={metricName}
+                scale={bandScale}
+                min={bandScale === 'score' ? 0 : domainMin}
+                max={bandScale === 'score' ? 100 : domainMax}
+                showNoData={false}
+              />
+            </details>
           </div>
         </aside>
 
-        <div className='map-stage'>
+        <div className={`map-stage${demoMode === 'focus' ? ' has-county-editor' : ''}`}>
           <div className='stage-meta'>
             <div>
               <span className='live-dot' aria-hidden='true' />
@@ -243,26 +355,67 @@ const App: React.FC = () => {
             </p>
           </div>
 
-          <div className='map-canvas' key={demoMode}>
+          {demoMode === 'focus' && (
+            <CountyEditor
+              key={focusProvinceId}
+              counties={provinceCounties}
+              enabledCounties={enabledCounties}
+              values={data}
+              valueDrafts={valueDrafts}
+              metricName={metricName}
+              onToggle={(id, enabled) => {
+                setEnabledCounties((current) => ({ ...current, [id]: enabled }))
+                clearInspection()
+              }}
+              onToggleAll={(enabled) => {
+                setEnabledCounties((current) => ({
+                  ...current,
+                  ...Object.fromEntries(provinceCounties.map((county) => [county.id, enabled])),
+                }))
+                clearInspection()
+              }}
+              onValueChange={(id, draft) => {
+                setValueDrafts((current) => ({ ...current, [id]: draft }))
+                const value = Number(draft)
+                if (draft.trim() !== '' && Number.isFinite(value)) {
+                  setValueOverrides((current) => ({ ...current, [id]: value }))
+                }
+              }}
+              onNoDataChange={(id, noData) => {
+                const draft = valueDrafts[id]
+                const previousValue = draft?.trim() ? normalizeMapValue(Number(draft)) : undefined
+                const value = previousValue ?? demoData[id]
+                setValueOverrides((current) => ({ ...current, [id]: noData ? null : value }))
+                if (!noData) setValueDrafts((current) => ({ ...current, [id]: String(value) }))
+              }}
+            />
+          )}
+
+          <div
+            className='map-canvas'
+            key={`${demoMode}-${
+              demoMode === 'focus' ? `${focusProvinceId}-${!!disabledProvinceValues[focusProvinceId]}` : ''
+            }`}
+          >
             <IranMap
               mode={activeMode}
               focusProvince={demoMode === 'focus' ? focusProvinceId : undefined}
               regions={demoMode === 'region' ? regions : []}
               detailedCounties={
-                demoMode === 'focus' && focusProvinceId === 'razaviKhorasan'
-                  ? focusCounties
+                demoMode === 'focus'
+                  ? selectedCountyIds
                   : demoMode === 'mixed' || demoMode === 'region'
                     ? detailCounties
                     : []
               }
-              data={demoData}
+              data={data}
               colorBands={colorBands}
               width='100%'
-              deactiveProvinceColor='#dce5e1'
+              deactiveProvinceColor='#e6e6e6'
               selectedAreaColor='#123f4b'
               strokeColor='#f8faf7'
               strokeWidth={0.35}
-              tooltipTitle='Score:'
+              tooltipTitle={`${metricName}:`}
               capitalMarkers={capitalLayer}
               capitalMarkerColor='#123f4b'
               capitalMarkerSize={demoMode === 'county' ? 3.2 : 4}
@@ -276,6 +429,7 @@ const App: React.FC = () => {
                 setSelectedCapital(null)
                 setSelectedIsland(null)
               }}
+              onDeselect={clearInspection}
               onHover={setHoveredArea}
               onCapitalSelect={(capital) => {
                 setSelectedCapital(capital)
@@ -320,14 +474,14 @@ const App: React.FC = () => {
               </small>
             </div>
             <div className='score-readout'>
-              <span>{activeCapital || selectedIsland ? 'Coordinates' : 'Score'}</span>
+              <span>{activeCapital || selectedIsland ? 'Coordinates' : metricName}</span>
               {activeCapital || selectedIsland ? (
                 <small>
                   {(activeCapital?.latitude || selectedIsland?.latitude)?.toFixed(4)}° N<br />
                   {(activeCapital?.longitude || selectedIsland?.longitude)?.toFixed(4)}° E
                 </small>
               ) : (
-                <strong>{activeArea?.value === undefined ? '—' : Math.round(activeArea.value)}</strong>
+                <strong>{activeArea ? (activeArea.value === undefined ? 'No data' : activeArea.value) : '—'}</strong>
               )}
             </div>
           </footer>
