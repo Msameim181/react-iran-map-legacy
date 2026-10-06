@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { countyBoundaries, provinceBoundaries } from '../../data/boundaries'
 import { countyCapitalMarkers, provinceCapitalMarkers } from '../../data/capitals'
 import { iranIslands, iranWaterBodies } from '../../data/geography'
@@ -131,6 +131,7 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
   tooltipTitle = '',
   selectProvinceHandler,
   onSelect,
+  onDeselect,
   onHover,
   strokeColor = '#ffffff',
   strokeWidth = 0.35,
@@ -151,6 +152,30 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
   onIslandSelect,
 }) => {
   const [selectedAreaId, setSelectedAreaId] = useState(defaultSelectedArea || defaultSelectedProvince)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const clearSelection = useCallback(() => {
+    if (selectedAreaId === undefined) return
+    setSelectedAreaId(undefined)
+    onDeselect?.()
+    onHover?.(null)
+    if (provinceBoundaries.some((province) => province.id === selectedAreaId)) {
+      selectProvinceHandler?.({ name: undefined, faName: undefined })
+    }
+  }, [onDeselect, onHover, selectedAreaId, selectProvinceHandler])
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper || selectedAreaId === undefined) return
+    const ownerDocument = wrapper.ownerDocument
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      const element = target?.nodeType === 1 ? (target as Element) : target?.parentElement
+      if (wrapper.contains(target) && element?.closest('.iran-map-area, .iran-map-island, .iran-map-capital')) return
+      clearSelection()
+    }
+    ownerDocument.addEventListener('click', handleClick, true)
+    return () => ownerDocument.removeEventListener('click', handleClick, true)
+  }, [clearSelection, selectedAreaId])
 
   const focusedProvince = useMemo(
     () => (focusProvince ? provinceBoundaries.find((province) => matchesBoundary(province, focusProvince)) : undefined),
@@ -273,7 +298,11 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
     [focusedProvince, mode],
   )
 
-  const handleSelect = (area: RenderableMapArea) => {
+  const handleSelect = (area: RenderableMapArea, toggle = true) => {
+    if (toggle && area.id === selectedAreaId) {
+      clearSelection()
+      return
+    }
     setSelectedAreaId(area.id)
     const publicArea: IranMapArea = {
       id: area.id,
@@ -303,7 +332,7 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
   })
 
   const handleIslandSelect = (island: RenderableMapIsland) => {
-    handleSelect(island.area)
+    handleSelect(island.area, false)
     onIslandSelect && onIslandSelect(getPublicIsland(island), publicArea(island.area))
   }
 
@@ -322,7 +351,7 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
   }, [capitalMarkers, focusedProvince, mode])
 
   return (
-    <div className={`iran-map-wrapper ${className}`.trim()} style={{ width: width || 500 }}>
+    <div ref={wrapperRef} className={`iran-map-wrapper ${className}`.trim()} style={{ width: width || 500 }}>
       <IranMapWrapper
         areas={areas}
         capitals={capitals}

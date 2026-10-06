@@ -122,6 +122,8 @@ export interface IranMapWrapperProps {
   tooltipTitle?: string
   selectProvinceHandler?: (province: selectedProvinceType) => void
   onSelect?: (area: IranMapArea) => void
+  /** Called when the selected area is toggled off or dismissed by an outside/background click. */
+  onDeselect?: () => void
   onHover?: (area: IranMapArea | null) => void
   deactiveProvinceColor?: string
   strokeColor?: string

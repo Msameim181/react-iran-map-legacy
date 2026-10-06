@@ -117,6 +117,7 @@ const IranMapWrapper: React.FC<MapProps> = ({
             vectorEffect='non-scaling-stroke'
             tabIndex={0}
             role='button'
+            aria-pressed={area.id === selectedAreaId}
             aria-label={getTooltip(area, tooltipTitle)}
             data-testid={`iran-map-${area.type}-${area.id}`}
             data-area-id={area.id}
