@@ -13,7 +13,7 @@
     "build": "npm run build:esm && npm run build:cjs",
     "build:esm": "tsc",
     "build:cjs": "tsc --module commonjs --outDir dist/cjs",
-    "lint": "eslint \"{**/*,*}.{js,ts,jsx,tsx}\"",
+    "lint": "eslint \"{src,tests,example,scripts}/**/*.{js,ts,jsx,tsx}\"",
     "prettier": "prettier --write \"{src,tests,example/src}/**/*.{js,ts,jsx,tsx}\"",
     "test": "jest --config jestconfig.json",
     "prepare": "npm run build",
@@ -53,5 +53,14 @@
     "react-tooltip": "^5.25.0",
     "ts-jest": "^29.1.1",
     "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^5.2.0",
+    "polygon-clipping": "^0.15.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^7.3.6"
   }
 }
