@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { copyFileSync, mkdirSync } = require('node:fs')
-const { resolve } = require('node:path')
+const { dirname, resolve } = require('node:path')
 
-const source = resolve(__dirname, '../src/components/mapSvg/iran-map.css')
+const styles = ['components/mapSvg/iran-map.css', 'components/scoreBands/score-bands.css']
 
 for (const format of ['esm', 'cjs']) {
-  const destination = resolve(__dirname, `../dist/${format}/components/mapSvg`)
-  mkdirSync(destination, { recursive: true })
-  copyFileSync(source, resolve(destination, 'iran-map.css'))
+  for (const stylesheet of styles) {
+    const destination = resolve(__dirname, `../dist/${format}/${stylesheet}`)
+    mkdirSync(dirname(destination), { recursive: true })
+    copyFileSync(resolve(__dirname, `../src/${stylesheet}`), destination)
+  }
 }
