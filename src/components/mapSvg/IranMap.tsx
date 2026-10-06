@@ -128,7 +128,7 @@ const IranMap: React.FC<IranMapWrapperProps> = ({
   onSelect,
   onHover,
   strokeColor = '#ffffff',
-  strokeWidth = 0.8,
+  strokeWidth = 0.35,
   className = '',
   ariaLabel = 'Interactive map of Iran',
   showLabels,

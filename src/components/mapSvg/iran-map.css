@@ -20,14 +20,12 @@
   outline: none;
   transition:
     fill 160ms ease,
-    opacity 160ms ease,
-    stroke-width 160ms ease;
+    opacity 160ms ease;
 }
 
 .iran-map-wrapper .iran-map-area:hover,
 .iran-map-wrapper .iran-map-area:focus-visible {
   opacity: 0.84;
-  stroke-width: 1.6;
 }
 
 .iran-map-wrapper .iran-map-area:focus-visible {

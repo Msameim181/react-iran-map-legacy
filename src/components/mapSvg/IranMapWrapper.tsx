@@ -57,6 +57,7 @@ const IranMapWrapper: React.FC<MapProps> = ({
         className='iran-map'
         xmlns='http://www.w3.org/2000/svg'
         viewBox={viewBox}
+        shapeRendering='geometricPrecision'
         role='img'
         aria-label={ariaLabel}
         style={{ width, height: 'auto', color: textColor }}
@@ -106,6 +107,9 @@ const IranMapWrapper: React.FC<MapProps> = ({
             fillRule='evenodd'
             stroke={strokeColor}
             strokeWidth={strokeWidth}
+            strokeLinejoin='round'
+            strokeLinecap='round'
+            strokeMiterlimit={1}
             vectorEffect='non-scaling-stroke'
             tabIndex={0}
             role='button'
@@ -168,6 +172,9 @@ const IranMapWrapper: React.FC<MapProps> = ({
                   fillRule='evenodd'
                   stroke={strokeColor}
                   strokeWidth={strokeWidth}
+                  strokeLinejoin='round'
+                  strokeLinecap='round'
+                  strokeMiterlimit={1}
                   vectorEffect='non-scaling-stroke'
                 />
                 {showIslandLabels && island.featured && (
